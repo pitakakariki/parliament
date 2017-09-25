@@ -56,10 +56,13 @@ candidates <- read_xlsx("data/2017_electorate_candidates.xlsx")
 
 names(candidates)[c(1,2)] <- c("V1", "Electorate")
 
-electorate <- candidates$Electorate[1]
+currentElectorate <- candidates$Electorate[1]
 for(i in seq_len(nrow(candidates))) {
 
-    if(is.na(candidates$Electorate[i])) candidates$Electorate[i] <- electorate
+    thisElectorate <- candidates$Electorate[i]
+    currentElectorate <- if(is.na(thisElectorate)) currentElectorate else thisElectorate
+
+    candidates$Electorate[i] <- currentElectorate
 }
 
 candidates <- subset(candidates, is.na(V1))

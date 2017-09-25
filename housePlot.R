@@ -83,7 +83,7 @@ party_rep <- function(app) {
 
     if(identical(app, "BLANK")) return(rep("BLANK", 120))
 
-    app <- app[c(4,3,8,5,7,2,9,1,6)]
+    app <- app[c(1,6,7,3,8,5,9,4,2)]
     rep(names(app), times=app)
 }
 

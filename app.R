@@ -4,16 +4,23 @@ source("setup.R")
 
 voteWidgets <- list()
 
+colStyle <- "display: flex; flex-direction: column; justify-content: center;"
+rowStyle <- "display: flex; flex-direction: rtl; justify-content: center;"
+
+rcolumn <- function(width, ...) column(width, ..., style=paste(colStyle, "text-align: right;"))
+lcolumn <- function(width, ...) column(width, ..., style=paste(colStyle, "text-align: left;"))
+
 for (i in seq_len(nrow(parties))) {
 
     this.party <- row.names(parties)[i]
 
     voteWidgets[[this.party]] <- fluidRow(
 
-        column(4, div(strong(this.party), style="text-align:right; vertical-align:middle")),
-        column(3, numericInput(this.party, "", parties$Vote[i], 0, 100, 1)),
-        column(2, uiOutput(paste0("electorates", this.party))),
-        column(2, uiOutput(this.party))
+        rcolumn(4, strong(this.party)),
+        rcolumn(3, numericInput(paste0("votes", i), "", parties$Vote[i], 0, 100, 1)),
+        rcolumn(2, uiOutput(paste0("electorates", i))),
+        rcolumn(2, uiOutput(paste0("total", i))),
+        style=rowStyle
     )
 }
 
@@ -28,19 +35,21 @@ ui <- fluidPage(
             h3("Party Votes"),
 
             fluidRow(
-                column(4),
-                column(3, h6("Votes")),
-                column(2, h6("Electorates", align="right")),
-                column(2, h6("Total", align="right"))
+                lcolumn(4),
+                lcolumn(3, h6(strong("Votes"))),
+                lcolumn(2, h6(strong("Electorates"), align="right")),
+                lcolumn(2, h6(strong("Total"), align="right")),
+                style=rowStyle
             ),
 
             voteWidgets,
 
             fluidRow(
 
-                column(7),
-                column(2, uiOutput("electoratesTotal")),
-                column(2, uiOutput("Total"))
+                rcolumn(7),
+                rcolumn(2, uiOutput("electoratesTotal")),
+                rcolumn(2, uiOutput("total")),
+                style=rowStyle
             )
         )),
 
@@ -53,11 +62,17 @@ ui <- fluidPage(
 
 )
 
-server <- function(input, output) {
+server <- function(input, output, session) {
 
     candidates <- reactive(C)
 
-    votes <- reactive(sapply(partyNames, function(x) input[[x]]))
+    votes <- reactive({
+
+        rval <- sapply(seq_along(partyNames), function(i) input[[paste0("votes", i)]])
+        names(rval) <- partyNames
+
+        rval
+    })
 
     electorateSeats <- reactive(
 
@@ -73,31 +88,34 @@ server <- function(input, output) {
         pmax(SainteLague(x), s)
     })
 
-    for(this.party in partyNames) {
+    for(i in seq_along(partyNames)) {
 
-        output[[paste0("electorates", this.party)]] <- eval(
+        output[[paste0("electorates", i)]] <- eval(
             substitute(
                 renderText(electorateSeats()[x]),
-                list(x=this.party)
+                list(x=partyNames[i])
             )
         )
     }
 
-    for(this.party in partyNames) {
+    for(i in seq_along(partyNames)) {
 
-        output[[this.party]] <- eval(
+        output[[paste0("total", i)]] <- eval(
             substitute(
                 renderText(totalSeats()[x]),
-                list(x=this.party)
+                list(x=i)
             )
         )
     }
 
     output$housePlot <- renderPlot(housePlot(totalSeats()))
 
-    output$test <- renderText(totalSeats())
+    output$electoratesTotal <- renderUI(strong(sum(electorateSeats())))
+    output$total <- renderUI(strong(sum(totalSeats())))
 
+    #output$test <- renderText(totalSeats())
 
+    session$onSessionEnded(stopApp)
 }
 
 shinyApp(ui, server)
